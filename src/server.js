@@ -11,7 +11,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 5000;
 
 // Middleware
 app.use(cors());
