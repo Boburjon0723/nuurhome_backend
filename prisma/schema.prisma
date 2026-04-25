@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- CORE MODELS ---
+
+enum Role {
+  ADMIN
+  ERP
+  SELLER
+  USER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  fullname  String?
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  transactions Transaction[]
+  orders       Order[]
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String?   // Legacy
+  name_uz     String?
+  name_ru     String?
+  name_en     String?
+  slug        String    @unique
+  image       String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id             String      @id @default(uuid())
+  categoryId     String
+  category       Category    @relation(fields: [categoryId], references: [id])
+  
+  // Multilingual Names
+  name           String?     // Legacy
+  name_uz        String?
+  name_ru        String?
+  name_en        String?
+
+  // Multilingual Descriptions
+  description    String?     // Legacy
+  description_uz String?
+  description_ru String?
+  description_en String?
+
+  sku            String?     // Product Code (Table 'size' field)
+  price          Decimal     @db.Decimal(15, 2)
+  stock          Decimal     @default(0) @db.Decimal(12, 3) 
+  isKg           Boolean     @default(false)
+  images         Json?       // Array of strings
+  features       Json?       // Characteristics [{k: "key", v: "val"}]
+  colors         Json?       // Array of color strings
+  
+  rating         Decimal     @default(0) @db.Decimal(3, 2)
+  reviews        Int         @default(0)
+  rope_weight_kg Decimal?    @db.Decimal(10, 3)
+
+  sortOrder      Int         @default(0)
+  model3dUrl     String?
+  showInNew      Boolean     @default(false)
+  isActive       Boolean     @default(true)
+  
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  orderItems     OrderItem[]
+}
+
+model Order {
+  id                    String        @id @default(uuid())
+  order_number          Int           @unique @default(autoincrement())
+  customer_name         String?
+  customer_phone        String?
+  total                 Decimal       @default(0) @db.Decimal(15, 2)
+  status                String        @default("new")
+  source                String?       @default("dokon")
+  note                  String?
+  receipt_url           String?
+  payment_method_detail String?
+  created_at            DateTime      @default(now())
+  updated_at            DateTime      @updatedAt
+
+  created_by            String?
+  user                  User?         @relation(fields: [created_by], references: [id])
+  
+  order_items           OrderItem[]
+  transactions          Transaction[]
+}
+
+// Status is just string natively
+
+model OrderItem {
+  id             String   @id @default(uuid())
+  order_id       String
+  order          Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product_id     String?
+  product        Product? @relation(fields: [product_id], references: [id])
+  product_name   String?
+  quantity       Decimal  @db.Decimal(12, 3)
+  product_price  Decimal  @db.Decimal(15, 2)
+  image_url      String?
+  sku            String?
+  rope_weight_kg Decimal? @db.Decimal(10, 3)
+  size           String?
+  color          String?
+  local_note     String?
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  type        TransactionType
+  amount      Decimal         @db.Decimal(15, 2)
+  category    String?         // E.g., 'Savdo', 'Xarid', 'Oylik'
+  description String
+  date        DateTime        @default(now())
+  
+  orderId     String?
+  order       Order?          @relation(fields: [orderId], references: [id])
+  
+  userId      String?
+  user        User?           @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime        @default(now())
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model Color {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  hex       String?  // Optional hex code
+  createdAt DateTime @default(now())
+}
