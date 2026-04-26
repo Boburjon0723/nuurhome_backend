@@ -22,10 +22,11 @@ async function resolveOrderItemProductId(item) {
   return null;
 }
 
-// Get all orders
+// Get all active orders (not soft-deleted)
 exports.getOrders = async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
+      where: { deleted_at: null },
       include: {
         order_items: {
           include: {
@@ -42,6 +43,30 @@ exports.getOrders = async (req, res) => {
   } catch (error) {
     console.error('Error fetching orders:', error);
     res.status(500).json({ message: 'Server error fetching orders' });
+  }
+};
+
+// Get only soft-deleted orders (Trash)
+exports.getDeletedOrders = async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      where: { deleted_at: { not: null } },
+      include: {
+        order_items: {
+          include: {
+            product: {
+              include: { category: true }
+            }
+          }
+        },
+        user: { select: { fullname: true } },
+      },
+      orderBy: { deleted_at: 'desc' },
+    });
+    res.json(orders);
+  } catch (error) {
+    console.error('Error fetching trashed orders:', error);
+    res.status(500).json({ message: 'Server error fetching trashed orders' });
   }
 };
 
@@ -217,35 +242,66 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// Delete an order
+// Soft delete an order (move to trash)
 exports.deleteOrder = async (req, res) => {
   const { id } = req.params;
   try {
-    await prisma.order.delete({
-      where: { id }
+    await prisma.order.update({
+      where: { id },
+      data: { deleted_at: new Date() }
     });
-    res.json({ message: 'Order deleted successfully' });
+    res.json({ message: 'Order moved to trash' });
   } catch (error) {
-    console.error('Error deleting order:', error);
-    res.status(500).json({ message: 'Server error deleting order', error: error.message });
+    console.error('Error moving order to trash:', error);
+    res.status(500).json({ message: 'Server error moving order to trash', error: error.message });
   }
 };
 
-// Bulk delete orders
+// Soft bulk delete orders
 exports.deleteOrders = async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ message: 'No IDs provided' });
   }
   try {
-    const result = await prisma.order.deleteMany({
+    const result = await prisma.order.updateMany({
       where: {
         id: { in: ids }
-      }
+      },
+      data: { deleted_at: new Date() }
     });
-    res.json({ message: `Deleted ${result.count} orders successfully` });
+    res.json({ message: `${result.count} orders moved to trash` });
   } catch (error) {
-    console.error('Error bulk deleting orders:', error);
-    res.status(500).json({ message: 'Server error bulk deleting orders', error: error.message });
+    console.error('Error bulk moving orders to trash:', error);
+    res.status(500).json({ message: 'Server error moving orders to trash', error: error.message });
+  }
+};
+
+// Restore a soft-deleted order
+exports.restoreOrder = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.order.update({
+      where: { id },
+      data: { deleted_at: null }
+    });
+    res.json({ message: 'Order restored successfully' });
+  } catch (error) {
+    console.error('Error restoring order:', error);
+    res.status(500).json({ message: 'Server error restoring order', error: error.message });
+  }
+};
+
+// Permanently delete an order from trash
+exports.permanentDeleteOrder = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.order.delete({
+      where: { id }
+    });
+    res.json({ message: 'Order permanently deleted' });
+  } catch (error) {
+    console.error('Error permanently deleting order:', error);
+    res.status(500).json({ message: 'Server error permanently deleting order', error: error.message });
   }
 };

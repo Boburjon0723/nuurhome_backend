@@ -103,6 +103,8 @@ model Order {
   created_by            String?
   user                  User?         @relation(fields: [created_by], references: [id])
   
+  deleted_at            DateTime?     
+  
   order_items           OrderItem[]
   transactions          Transaction[]
 }
