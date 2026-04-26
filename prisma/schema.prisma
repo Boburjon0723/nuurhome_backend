@@ -156,3 +156,73 @@ model Color {
   hex       String?  // Optional hex code
   createdAt DateTime @default(now())
 }
+
+// --- FINANCE MODELS ---
+
+model Department {
+  id          String   @id @default(uuid())
+  name_uz     String?
+  name_ru     String?
+  name_en     String?
+  parent_id   String?
+  sort_order  Int      @default(0)
+  is_active   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  materialMovements MaterialMovement[]
+}
+
+model FinancePartner {
+  id          String   @id @default(uuid())
+  name_uz     String?
+  name_ru     String?
+  name_en     String?
+  type        String?  // E.g., 'Supplier', 'Buyer'
+  is_active   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  financeEntries PartnerFinanceEntry[]
+}
+
+model PartnerFinanceEntry {
+  id          String   @id @default(uuid())
+  partner_id  String
+  partner     FinancePartner @relation(fields: [partner_id], references: [id])
+  entry_type  String   // 'supply', 'payment', 'payment_in', 'sale_out'
+  amount_uzs  Decimal  @db.Decimal(15, 2)
+  currency    String   @default("UZS")
+  entry_date  String   // YYYY-MM-DD
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model MaterialMovement {
+  id                   String     @id @default(uuid())
+  department_id        String
+  department           Department @relation(fields: [department_id], references: [id])
+  raw_material_id      String?
+  unit_price_snapshot  Decimal?   @db.Decimal(15, 2)
+  total_cost           Decimal    @db.Decimal(15, 2)
+  movement_date        String     // YYYY-MM-DD
+  currency             String     @default("UZS")
+  note                 String?
+  createdAt            DateTime   @default(now())
+}
+
+model EmployeeAdvance {
+  id           String   @id @default(uuid())
+  amount       Decimal  @db.Decimal(15, 2)
+  advance_date String   // YYYY-MM-DD
+  note         String?
+  createdAt    DateTime @default(now())
+}
+
+model EmployeeSalaryPayment {
+  id           String   @id @default(uuid())
+  amount       Decimal  @db.Decimal(15, 2)
+  payment_date String   // YYYY-MM-DD
+  note         String?
+  createdAt    DateTime @default(now())
+}
