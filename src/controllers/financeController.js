@@ -94,6 +94,7 @@ exports.getPartnerEntries = async (req, res) => {
         
         const entries = await prisma.partnerFinanceEntry.findMany({
             where,
+            include: { lines: true },
             orderBy: { entry_date: 'desc' }
         });
         res.json(entries);
@@ -104,18 +105,51 @@ exports.getPartnerEntries = async (req, res) => {
 
 exports.createPartnerEntry = async (req, res) => {
     try {
-        const { partner_id, entry_type, amount_uzs, currency, entry_date, description } = req.body;
-        const entry = await prisma.partnerFinanceEntry.create({
-            data: {
-                partner_id,
-                entry_type,
-                amount_uzs: parseFloat(amount_uzs),
-                currency,
-                entry_date,
-                description
+        const { partner_id, entry_type, amount_uzs, currency, entry_date, description, lines, responsible_person, warehouse } = req.body;
+        
+        const result = await prisma.$transaction(async (tx) => {
+            const entry = await tx.partnerFinanceEntry.create({
+                data: {
+                    partner_id,
+                    entry_type,
+                    amount_uzs: parseFloat(amount_uzs),
+                    currency,
+                    entry_date,
+                    description,
+                    responsible_person,
+                    warehouse,
+                    status: 'completed'
+                }
+            });
+
+            if (lines && lines.length > 0) {
+                await tx.partnerFinanceEntryLine.createMany({
+                    data: lines.map(ln => ({
+                        entry_id: entry.id,
+                        item_name: ln.item_name,
+                        quantity_display: String(ln.quantity_display),
+                        unit_price_uzs: parseFloat(ln.unit_price_uzs),
+                        line_total_uzs: parseFloat(ln.line_total_uzs)
+                    }))
+                });
             }
+
+            return entry;
         });
-        res.status(201).json(entry);
+
+        res.status(201).json(result);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.deletePartnerEntry = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.partnerFinanceEntry.delete({
+            where: { id }
+        });
+        res.json({ message: 'Deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

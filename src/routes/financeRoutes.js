@@ -14,6 +14,7 @@ router.post('/partners', financeController.createPartner);
 // Partner Entries
 router.get('/partner-entries', financeController.getPartnerEntries);
 router.post('/partner-entries', financeController.createPartnerEntry);
+router.delete('/partner-entries/:id', financeController.deletePartnerEntry);
 
 // Material Movements (Expenses)
 router.get('/material-movements', financeController.getMaterialMovements);
