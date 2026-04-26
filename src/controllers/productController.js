@@ -69,9 +69,49 @@ exports.deleteProduct = async (req, res) => {
         await prisma.product.delete({
             where: { id: req.params.id }
         });
+        await redisClient.del(CACHE_KEY_PRODUCTS);
         res.json({ message: 'Product deleted' });
     } catch (error) {
         console.error('Delete Product Error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.bulkUpdateCategoryColors = async (req, res) => {
+    const { categoryId, colors, action } = req.body; // action: 'add', 'replace', 'remove'
+    if (!categoryId || !Array.isArray(colors)) {
+        return res.status(400).json({ message: 'CategoryId and colors array are required' });
+    }
+
+    try {
+        const products = await prisma.product.findMany({
+            where: { categoryId }
+        });
+
+        const updates = products.map(product => {
+            let existingColors = Array.isArray(product.colors) ? product.colors : [];
+            let newColors = [];
+
+            if (action === 'add') {
+                newColors = [...new Set([...existingColors, ...colors])];
+            } else if (action === 'replace') {
+                newColors = colors;
+            } else if (action === 'remove') {
+                newColors = existingColors.filter(c => !colors.includes(c));
+            }
+
+            return prisma.product.update({
+                where: { id: product.id },
+                data: { colors: newColors }
+            });
+        });
+
+        await Promise.all(updates);
+        await redisClient.del(CACHE_KEY_PRODUCTS);
+
+        res.json({ message: `Successfully updated ${products.length} products` });
+    } catch (error) {
+        console.error('Bulk Update Colors Error:', error);
         res.status(500).json({ message: error.message });
     }
 };
