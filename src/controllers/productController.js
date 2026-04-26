@@ -85,10 +85,15 @@ exports.bulkUpdateCategoryColors = async (req, res) => {
 
     try {
         const products = await prisma.product.findMany({
-            where: { categoryId }
+            where: { categoryId: categoryId || undefined }
         });
 
-        const updates = products.map(product => {
+        if (products.length === 0) {
+            return res.json({ message: 'No products found in this category' });
+        }
+
+        // Use sequential updates to avoid connection pool exhaustion
+        for (const product of products) {
             let existingColors = Array.isArray(product.colors) ? product.colors : [];
             let newColors = [];
 
@@ -100,15 +105,13 @@ exports.bulkUpdateCategoryColors = async (req, res) => {
                 newColors = existingColors.filter(c => !colors.includes(c));
             }
 
-            return prisma.product.update({
+            await prisma.product.update({
                 where: { id: product.id },
                 data: { colors: newColors }
             });
-        });
+        }
 
-        await Promise.all(updates);
         await redisClient.del(CACHE_KEY_PRODUCTS);
-
         res.json({ message: `Successfully updated ${products.length} products` });
     } catch (error) {
         console.error('Bulk Update Colors Error:', error);
