@@ -242,3 +242,12 @@ model EmployeeSalaryPayment {
   note         String?
   createdAt    DateTime @default(now())
 }
+
+model ExcelImportHistory {
+  id          String   @id @default(uuid())
+  fileName    String
+  importDate  DateTime @default(now())
+  items       Json?    // Aggregated Excel items [{model_code, color, quantity, product_name}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

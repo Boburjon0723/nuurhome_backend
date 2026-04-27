@@ -11,6 +11,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const statisticsRoutes = require('./routes/statisticsRoutes');
+const excelImportRoutes = require('./routes/excelImportRoutes');
 
 const app = express();
 const PORT = 5000;
@@ -31,6 +32,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/statistics', statisticsRoutes);
+app.use('/api/excel-import', excelImportRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'NuurHome API is running...' });
