@@ -10,6 +10,7 @@ const colorRoutes = require('./routes/colorRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const financeRoutes = require('./routes/financeRoutes');
+const statisticsRoutes = require('./routes/statisticsRoutes');
 
 const app = express();
 const PORT = 5000;
@@ -29,6 +30,7 @@ app.use('/api/colors', colorRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/statistics', statisticsRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'NuurHome API is running...' });

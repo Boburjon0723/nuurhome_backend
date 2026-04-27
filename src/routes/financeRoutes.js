@@ -10,10 +10,12 @@ router.put('/departments/:id', financeController.updateDepartment);
 // Partners
 router.get('/partners', financeController.getPartners);
 router.post('/partners', financeController.createPartner);
+router.delete('/partners/:id', financeController.deletePartner);
 
 // Partner Entries
 router.get('/partner-entries', financeController.getPartnerEntries);
 router.post('/partner-entries', financeController.createPartnerEntry);
+router.put('/partner-entries/:id', financeController.updatePartnerEntry);
 router.delete('/partner-entries/:id', financeController.deletePartnerEntry);
 
 // Material Movements (Expenses)

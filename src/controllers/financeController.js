@@ -82,6 +82,20 @@ exports.createPartner = async (req, res) => {
     }
 };
 
+exports.deletePartner = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.$transaction(async (tx) => {
+            // Lines will cascade delete when entry is deleted
+            await tx.partnerFinanceEntry.deleteMany({ where: { partner_id: id } });
+            await tx.financePartner.delete({ where: { id } });
+        });
+        res.json({ message: 'Partner deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // --- PARTNER ENTRIES ---
 exports.getPartnerEntries = async (req, res) => {
     try {
@@ -138,6 +152,48 @@ exports.createPartnerEntry = async (req, res) => {
         });
 
         res.status(201).json(result);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.updatePartnerEntry = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { partner_id, amount_uzs, currency, entry_date, description, lines, responsible_person, warehouse } = req.body;
+
+        const result = await prisma.$transaction(async (tx) => {
+            const entry = await tx.partnerFinanceEntry.update({
+                where: { id },
+                data: {
+                    partner_id,
+                    amount_uzs: parseFloat(amount_uzs),
+                    currency,
+                    entry_date,
+                    description,
+                    responsible_person,
+                    warehouse
+                }
+            });
+
+            if (lines) {
+                await tx.partnerFinanceEntryLine.deleteMany({ where: { entry_id: id } });
+                if (lines.length > 0) {
+                    await tx.partnerFinanceEntryLine.createMany({
+                        data: lines.map(ln => ({
+                            entry_id: id,
+                            item_name: ln.item_name,
+                            quantity_display: String(ln.quantity_display),
+                            unit_price_uzs: parseFloat(ln.unit_price_uzs),
+                            line_total_uzs: parseFloat(ln.line_total_uzs)
+                        }))
+                    });
+                }
+            }
+            return entry;
+        });
+
+        res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
