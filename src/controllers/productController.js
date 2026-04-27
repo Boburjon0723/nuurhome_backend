@@ -6,15 +6,31 @@ const CACHE_KEY_PRODUCTS = 'all_products';
 
 exports.getAllProducts = async (req, res) => {
     try {
-        const cached = await redisClient.get(CACHE_KEY_PRODUCTS);
-        if (cached) return res.json(JSON.parse(cached));
+        // Try Cache
+        try {
+            const cached = await redisClient.get(CACHE_KEY_PRODUCTS);
+            if (cached) {
+                console.log('Serving products from cache');
+                return res.json(JSON.parse(cached));
+            }
+        } catch (cacheErr) {
+            console.warn('Redis Cache Error (Products):', cacheErr.message);
+            // Non-blocking, continue to DB
+        }
 
+        // DB Fallback
         const products = await prisma.product.findMany({
             include: { category: true },
             orderBy: { createdAt: 'desc' }
         });
         
-        await redisClient.setEx(CACHE_KEY_PRODUCTS, 3600, JSON.stringify(products));
+        // Try to update cache (async)
+        try {
+            await redisClient.setEx(CACHE_KEY_PRODUCTS, 3600, JSON.stringify(products));
+        } catch (setCacheErr) {
+            // Log set error but don't fail the request
+        }
+
         res.json(products);
     } catch (error) {
         console.error('All Products Error:', error);
