@@ -31,6 +31,7 @@ model User {
   // Relations
   transactions Transaction[]
   orders       Order[]
+  employee     Employee?
 }
 
 model Category {
@@ -227,8 +228,31 @@ model MaterialMovement {
   createdAt            DateTime   @default(now())
 }
 
+model Employee {
+  id             String   @id @default(uuid())
+  name           String
+  phone          String?
+  position       String?  
+  monthly_salary Decimal  @default(0) @db.Decimal(15, 2)
+  bonus_percent  Decimal  @default(0) @db.Decimal(15, 2)
+  worked_days    Int      @default(0)
+  rest_days      Int      @default(0)
+  isActive       Boolean  @default(true)
+  
+  userId         String?  @unique
+  user           User?    @relation(fields: [userId], references: [id])
+  
+  advances       EmployeeAdvance[]
+  salaries       EmployeeSalaryPayment[]
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model EmployeeAdvance {
   id           String   @id @default(uuid())
+  employee_id  String
+  employee     Employee @relation(fields: [employee_id], references: [id], onDelete: Cascade)
   amount       Decimal  @db.Decimal(15, 2)
   advance_date String   // YYYY-MM-DD
   note         String?
@@ -237,6 +261,8 @@ model EmployeeAdvance {
 
 model EmployeeSalaryPayment {
   id           String   @id @default(uuid())
+  employee_id  String
+  employee     Employee @relation(fields: [employee_id], references: [id], onDelete: Cascade)
   amount       Decimal  @db.Decimal(15, 2)
   payment_date String   // YYYY-MM-DD
   note         String?
@@ -250,4 +276,19 @@ model ExcelImportHistory {
   items       Json?    // Aggregated Excel items [{model_code, color, quantity, product_name}]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model EmployeePayrollMonthClosure {
+  id        String   @id @default(uuid())
+  period_ym String   @unique // "YYYY-MM"
+  source    String?  @default("crm")
+  createdAt DateTime @default(now())
+}
+
+model EmployeeLeaveRequest {
+  id          String   @id @default(uuid())
+  employee_id String
+  status      String   @default("approved")
+  resolved_at DateTime?
+  createdAt   DateTime @default(now())
 }
