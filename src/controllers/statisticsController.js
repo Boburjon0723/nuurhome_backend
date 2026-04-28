@@ -174,7 +174,7 @@ exports.getAnalytics = async (req, res) => {
     
     const financeTrend = Object.values(financeTrendMap).sort((a, b) => a.date.localeCompare(b.date));
 
-    const productsCount = await prisma.product.count({ where: { deleted_at: null } });
+    const productsCount = await prisma.product.count({ where: { isActive: true } });
     const employeesCount = await prisma.employee.count();
 
     const resultData = {
