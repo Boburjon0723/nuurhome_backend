@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const redisClient = require('../config/redis');
 
 /**
  * Statistik hisobotlarni hisoblash:
@@ -11,6 +12,18 @@ exports.getAnalytics = async (req, res) => {
   try {
     const { start, end } = req.query;
     
+    // Check Redis Cache
+    const cacheKey = `analytics_${start || 'all'}_${end || 'all'}`;
+    try {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        console.log('Serving analytics from cache');
+        return res.json(JSON.parse(cached));
+      }
+    } catch (cacheErr) {
+      console.warn('Redis Cache Error (Analytics):', cacheErr.message);
+    }
+
     // Davrni aniqlash
     let startDate = start ? new Date(start) : new Date(new Date().setDate(new Date().getDate() - 30));
     let endDate = end ? new Date(end) : new Date();
@@ -161,12 +174,17 @@ exports.getAnalytics = async (req, res) => {
     
     const financeTrend = Object.values(financeTrendMap).sort((a, b) => a.date.localeCompare(b.date));
 
-    res.json({
+    const productsCount = await prisma.product.count({ where: { deleted_at: null } });
+    const employeesCount = await prisma.employee.count();
+
+    const resultData = {
       summary: {
         totalSales,
         totalExpense,
         totalIncome: totalSales,
         ordersCount: completedOrders.length,
+        productsCount,
+        employeesCount
       },
       categories,
       products,
@@ -174,7 +192,14 @@ exports.getAnalytics = async (req, res) => {
       customerModels,
       salesTrend,
       financeTrend,
-    });
+    };
+
+    // Save to Cache for 5 minutes
+    try {
+      await redisClient.setEx(cacheKey, 300, JSON.stringify(resultData));
+    } catch (setCacheErr) {}
+
+    res.json(resultData);
 
   } catch (error) {
     console.error('Statistika hisoblashda xatolik:', error);

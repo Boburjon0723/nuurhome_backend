@@ -73,6 +73,8 @@ exports.updateProduct = async (req, res) => {
             where: { id: req.params.id },
             data: req.body
         });
+        // Invalidate cache on update
+        await redisClient.del(CACHE_KEY_PRODUCTS);
         res.json(product);
     } catch (error) {
         console.error('Update Product ERROR:', error);
