@@ -3,14 +3,14 @@ const prisma = new PrismaClient();
 
 exports.getAllInventory = async (req, res) => {
     try {
-        const inventory = await prisma.productInventory.findMany({
+        const products = await prisma.product.findMany({
             include: {
-                product: {
-                    include: { category: true }
-                }
-            }
+                category: true,
+                inventory: true
+            },
+            orderBy: { name: 'asc' }
         });
-        res.json(inventory);
+        res.json(products);
     } catch (error) {
         console.error('Get Inventory Error:', error);
         res.status(500).json({ message: error.message });
