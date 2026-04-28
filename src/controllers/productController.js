@@ -20,7 +20,10 @@ exports.getAllProducts = async (req, res) => {
 
         // DB Fallback
         const products = await prisma.product.findMany({
-            include: { category: true },
+            include: { 
+                category: true,
+                inventory: true
+            },
             orderBy: { createdAt: 'desc' }
         });
         

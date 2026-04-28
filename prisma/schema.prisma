@@ -85,6 +85,7 @@ model Product {
   updatedAt      DateTime    @updatedAt
 
   orderItems     OrderItem[]
+  inventory      ProductInventory[]
 }
 
 model Order {
@@ -291,4 +292,30 @@ model EmployeeLeaveRequest {
   status      String   @default("approved")
   resolved_at DateTime?
   createdAt   DateTime @default(now())
+}
+
+model ProductInventory {
+  id         String   @id @default(uuid())
+  productId  String   @map("product_id")
+  product    Product  @relation(fields: [productId], references: [id])
+  colorKey   String?  @map("color_key")
+  stock      Decimal  @default(0) @db.Decimal(12, 3)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([productId, colorKey])
+  @@map("product_inventory")
+}
+
+model StockMovement {
+  id            String   @id @default(uuid())
+  productId     String?  @map("product_id")
+  colorKey      String?  @map("color_key")
+  qty           Decimal  @db.Decimal(12, 3)
+  type          String   // 'in', 'out'
+  orderId       String?  @map("order_id")
+  orderNumber   Int?     @map("order_number")
+  customerName  String?  @map("customer_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("stock_movements")
 }
