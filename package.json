@@ -16,7 +16,7 @@
     "sync:products": "node scripts/sync-products-from-nuur.js",
     "clear:migrated-colors:dry": "node scripts/clear-migrated-product-colors.js --dry-run",
     "clear:migrated-colors": "node scripts/clear-migrated-product-colors.js",
-    "postinstall": "prisma generate && prisma db push && npm run seed"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.x",
