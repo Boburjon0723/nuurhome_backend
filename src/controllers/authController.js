@@ -3,6 +3,53 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// REGISTRATSIYA
+const register = async (req, res) => {
+  const { email, password, fullname, phone, address } = req.body;
+
+  try {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Bu email bilan allaqachon ro\'yxatdan o\'tilgan' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        fullname,
+        phone,
+        address,
+        role: 'USER'
+      }
+    });
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET || 'secret_key',
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullname: user.fullname,
+        phone: user.phone,
+        address: user.address,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Ro\'yxatdan o\'tishda xatolik yuz berdi' });
+  }
+};
+
+// LOGIN
 const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -30,6 +77,8 @@ const login = async (req, res) => {
         id: user.id,
         email: user.email,
         fullname: user.fullname,
+        phone: user.phone,
+        address: user.address,
         role: user.role
       }
     });
@@ -39,4 +88,4 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { login };
+module.exports = { login, register };
