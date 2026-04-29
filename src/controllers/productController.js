@@ -5,9 +5,16 @@ const CACHE_KEY_PRODUCTS = 'all_products';
 
 exports.getAllProducts = async (req, res) => {
     try {
-        // DB Fetch directly (Bypassing cache for troubleshooting)
+        // 1. Try to get from cache
+        try {
+            const cachedProducts = await redisClient.get(CACHE_KEY_PRODUCTS);
+            if (cachedProducts) {
+                return res.json(JSON.parse(cachedProducts));
+            }
+        } catch (cacheErr) {
+            console.error('Redis Get Error:', cacheErr);
+        }
 
-        // DB Fallback
         const products = await prisma.product.findMany({
             include: { 
                 category: true,
@@ -16,11 +23,10 @@ exports.getAllProducts = async (req, res) => {
             orderBy: { createdAt: 'desc' }
         });
         
-        // Try to update cache (async)
         try {
             await redisClient.setEx(CACHE_KEY_PRODUCTS, 3600, JSON.stringify(products));
         } catch (setCacheErr) {
-            // Log set error but don't fail the request
+            console.error('Redis Set Error:', setCacheErr);
         }
 
         res.json(products);
