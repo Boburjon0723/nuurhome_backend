@@ -17,6 +17,7 @@ const warehouseRoutes = require('./routes/warehouseRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const albumRoutes = require('./routes/albumRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 const app = express();
 const PORT = 5000;
@@ -43,6 +44,7 @@ app.use('/api/warehouse', warehouseRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'NuurHome API is running...' });
