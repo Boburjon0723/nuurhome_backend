@@ -16,7 +16,29 @@ async function main() {
     }
   });
 
-  console.log('Seed muvaffaqiyatli: Admin yaratildi/yangilandi', admin.email);
+  console.log('Seed: Admin yaratildi/yangilandi', admin.email);
+
+  // Default Settings
+  const defaultSettings = [
+    { key: 'site_name', value: 'Nuur Home' },
+    { key: 'phone', value: '+998 90 123 45 67' },
+    { key: 'email', value: 'info@nuurhome.uz' },
+    { key: 'address', value: 'Toshkent sh., Chilonzor tumani' },
+    { key: 'instagram_url', value: 'https://instagram.com/nuurhome' },
+    { key: 'telegram_url', value: 'https://t.me/nuurhome' },
+    { key: 'work_hours', value: '09:00 - 18:00' },
+    { key: 'about_hero_title', value: 'Biz uyingizga go‘zallik olib kiramiz' },
+    { key: 'about_hero_subtitle', value: 'Nuur Home - sifat va nafosat ramzi' }
+  ];
+
+  for (const s of defaultSettings) {
+    await prisma.siteSetting.upsert({
+      where: { key: s.key },
+      update: {},
+      create: s
+    });
+  }
+  console.log('Seed: Default sozlamalar yaratildi');
 }
 
 main()
