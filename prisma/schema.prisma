@@ -33,6 +33,7 @@ model User {
   // Relations
   transactions Transaction[]
   orders       Order[]
+  reviews      Review[]
   employee     Employee?
 }
 
@@ -88,6 +89,7 @@ model Product {
 
   orderItems     OrderItem[]
   inventory      ProductInventory[]
+  reviewsList    Review[]
 }
 
 model Order {
