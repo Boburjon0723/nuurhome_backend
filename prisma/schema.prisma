@@ -321,3 +321,69 @@ model StockMovement {
 
   @@map("stock_movements")
 }
+
+model Review {
+  id                  String   @id @default(uuid())
+  product_id          String
+  product             Product  @relation(fields: [product_id], references: [id])
+  user_id             String?
+  user                User?    @relation(fields: [user_id], references: [id])
+  author_display_name String?
+  rating              Int      @default(5)
+  comment             String
+  status              String   @default("approved") // approved, pending, rejected
+  created_at          DateTime @default(now())
+}
+
+model ContactMessage {
+  id         String   @id @default(uuid())
+  name       String
+  email      String?
+  phone      String?
+  subject    String?
+  message    String
+  status     String   @default("new") // new, read, replied
+  created_at DateTime @default(now())
+}
+
+model AlbumImage {
+  id         String   @id @default(uuid())
+  image_url  String
+  title_uz   String?
+  title_ru   String?
+  title_en   String?
+  format     String?  @default("portrait") // portrait, landscape, square, large
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+}
+
+model SiteSetting {
+  id            String   @id @default(uuid())
+  key           String   @unique
+  value         String?
+  description   String?
+  updated_at    DateTime @updatedAt
+}
+
+model Banner {
+  id         String   @id @default(uuid())
+  image_url  String
+  title_uz   String?
+  title_ru   String?
+  title_en   String?
+  link_url   String?
+  is_active  Boolean  @default(true)
+  sort_order Int      @default(0)
+  created_at DateTime @default(now())
+}
+
+model SiteBenefit {
+  id         String   @id @default(uuid())
+  icon       String?  // Lucide icon name
+  title_uz   String?
+  title_ru   String?
+  title_en   String?
+  is_active  Boolean  @default(true)
+  sort_order Int      @default(0)
+  created_at DateTime @default(now())
+}

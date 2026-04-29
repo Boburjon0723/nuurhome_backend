@@ -88,4 +88,57 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { login, register };
+// PROFILNI TAHRIRLASH
+const updateProfile = async (req, res) => {
+  const { userId } = req.user; // Middleware'dan keladi
+  const { fullname, phone, address } = req.body;
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { fullname, phone, address }
+    });
+
+    res.json({
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        fullname: updatedUser.fullname,
+        phone: updatedUser.phone,
+        address: updatedUser.address,
+        role: updatedUser.role
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Profilni yangilashda xatolik' });
+  }
+};
+
+// PAROLNI O'ZGARTIRISH
+const changePassword = async (req, res) => {
+  const { userId } = req.user;
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Amaldagi parol noto\'g\'ri' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ message: 'Parol muvaffaqiyatli o\'zgartirildi' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Parolni o\'zgartirishda xatolik' });
+  }
+};
+
+module.exports = { login, register, updateProfile, changePassword };

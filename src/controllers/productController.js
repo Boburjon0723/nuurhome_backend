@@ -129,3 +129,27 @@ exports.bulkUpdateCategoryColors = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.getProductsByIds = async (req, res) => {
+    const { ids } = req.query;
+    if (!ids) {
+        return res.status(400).json({ message: 'ID lar ko\'rsatilmadi' });
+    }
+
+    const idList = ids.split(',').filter(id => id.trim() !== '');
+
+    try {
+        const products = await prisma.product.findMany({
+            where: {
+                id: { in: idList }
+            },
+            include: {
+                category: true
+            }
+        });
+        res.json(products);
+    } catch (error) {
+        console.error('Get Products By Ids Error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};

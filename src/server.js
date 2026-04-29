@@ -14,6 +14,8 @@ const statisticsRoutes = require('./routes/statisticsRoutes');
 const excelImportRoutes = require('./routes/excelImportRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const warehouseRoutes = require('./routes/warehouseRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const albumRoutes = require('./routes/albumRoutes');
 
 const app = express();
 const PORT = 5000;
@@ -37,6 +39,8 @@ app.use('/api/statistics', statisticsRoutes);
 app.use('/api/excel-import', excelImportRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/warehouse', warehouseRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/album', albumRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'NuurHome API is running...' });
