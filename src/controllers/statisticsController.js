@@ -31,8 +31,34 @@ exports.getAnalytics = async (req, res) => {
     if (isNaN(startDate.getTime())) startDate = new Date(new Date().setDate(new Date().getDate() - 30));
     if (isNaN(endDate.getTime())) endDate = new Date();
 
-    // 1. Tugallangan buyurtmalar (Case-insensitive qidiruv)
-    // Tizimda turli xil yozilgan bo'lishi mumkin: Completed, completed, Tugallandi, tugallandi...
+    // 1. All Orders for status counts
+    const allOrders = await prisma.order.findMany({
+      where: {
+        deleted_at: null,
+        created_at: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: { status: true, total: true, created_at: true, id: true, customer_name: true }
+    });
+
+    const statusCounts = {
+      new: 0,
+      pending: 0,
+      completed: 0,
+      cancelled: 0
+    };
+
+    allOrders.forEach(o => {
+      const s = String(o.status).toLowerCase();
+      if (s === 'new' || s === 'yangi') statusCounts.new++;
+      else if (s === 'pending' || s === 'jarayonda') statusCounts.pending++;
+      else if (s === 'completed' || s === 'tugallandi' || s === 'tugallangan') statusCounts.completed++;
+      else if (s === 'cancelled' || s === 'bekor qilingan') statusCounts.cancelled++;
+    });
+
+    // 1b. Tugallangan buyurtmalar (for financial calculations)
     const completedOrders = await prisma.order.findMany({
       where: {
         deleted_at: null,
@@ -184,8 +210,13 @@ exports.getAnalytics = async (req, res) => {
         totalIncome: totalSales,
         ordersCount: completedOrders.length,
         productsCount,
-        employeesCount
+        employeesCount,
+        newOrders: statusCounts.new,
+        pendingOrders: statusCounts.pending,
+        completedOrders: statusCounts.completed,
+        cancelledOrders: statusCounts.cancelled
       },
+      recentOrders: allOrders.sort((a, b) => b.created_at - a.created_at).slice(0, 5),
       categories,
       products,
       customers,
