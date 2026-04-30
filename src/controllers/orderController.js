@@ -131,115 +131,57 @@ exports.createOrder = async (req, res) => {
       created_by
     } = req.body;
 
+    if (total != null && Number(total) < 0) {
+      return res.status(400).json({ message: 'Total amount cannot be negative' });
+    }
+
     const itemsToProcess = order_items || items || [];
     const createItems = [];
     for (const item of itemsToProcess) {
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.product_price || item.price) || 0;
+      
+      if (qty <= 0) {
+        return res.status(400).json({ message: `Invalid quantity for product ${item.product_name}` });
+      }
+      if (price < 0) {
+        return res.status(400).json({ message: `Invalid price for product ${item.product_name}` });
+      }
+
       const resolvedProductId = await resolveOrderItemProductId(item);
       createItems.push({
         product_id: resolvedProductId,
         product_name: item.product_name,
-        quantity: item.quantity,
-        product_price: item.product_price || item.price || 0,
+        quantity: qty,
+        product_price: price,
         image_url: item.image_url,
         sku: item.sku,
         size: item.size,
         color: item.color,
-        local_note: item.local_note,
+        local_note: item.local_note || item.line_note,
         rope_weight_kg: item.rope_weight_kg
       });
     }
 
-    const order = await prisma.$transaction(async (tx) => {
-      // 1. Create the order
-      const newOrder = await tx.order.create({
-        data: {
-          customer_name,
-          customer_phone,
-          customer_address,
-          total: total || 0,
-          status: status || 'new',
-          source: source || 'dokon',
-          note,
-          payment_method_detail,
-          receipt_url,
-          created_by,
-          order_items: {
-            create: createItems
-          }
-        },
-        include: {
-          order_items: true
+    const order = await prisma.order.create({
+      data: {
+        customer_name,
+        customer_phone,
+        customer_address,
+        total: total || 0,
+        status: status || 'new',
+        source: source || 'dokon',
+        note,
+        payment_method_detail,
+        receipt_url,
+        created_by,
+        order_items: {
+          create: createItems
         }
-      });
-
-      // 2. Deduct stock for each item
-      for (const item of newOrder.order_items) {
-        if (!item.product_id) continue;
-
-        const qtyToDeduct = Number(item.quantity) || 0;
-        if (qtyToDeduct <= 0) continue;
-
-        // A. Update Color-specific Inventory if color is specified
-        if (item.color) {
-          await tx.productInventory.upsert({
-            where: {
-              productId_colorKey: {
-                productId: item.product_id,
-                colorKey: item.color
-              }
-            },
-            update: {
-              stock: { decrement: qtyToDeduct }
-            },
-            create: {
-              productId: item.product_id,
-              colorKey: item.color,
-              stock: -qtyToDeduct
-            }
-          });
-        } else {
-          // If no color, deduct from the "null" color inventory
-          await tx.productInventory.upsert({
-            where: {
-              productId_colorKey: {
-                productId: item.product_id,
-                colorKey: null
-              }
-            },
-            update: {
-              stock: { decrement: qtyToDeduct }
-            },
-            create: {
-              productId: item.product_id,
-              colorKey: null,
-              stock: -qtyToDeduct
-            }
-          });
-        }
-
-        // B. Update Global Product Stock
-        await tx.product.update({
-          where: { id: item.product_id },
-          data: {
-            stock: { decrement: qtyToDeduct }
-          }
-        });
-
-        // C. Create Stock Movement
-        await tx.stockMovement.create({
-          data: {
-            productId: item.product_id,
-            colorKey: item.color || null,
-            qty: -qtyToDeduct,
-            type: 'out',
-            orderId: newOrder.id,
-            orderNumber: newOrder.order_number,
-            customerName: customer_name || 'Mijoz'
-          }
-        });
+      },
+      include: {
+        order_items: true
       }
-
-      return newOrder;
     });
 
     res.status(201).json(order);
@@ -266,118 +208,64 @@ exports.updateOrder = async (req, res) => {
       note,
       payment_method_detail,
       receipt_url,
+      customer_address,
       order_items,
     } = req.body;
 
-    const updatedOrder = await prisma.$transaction(async (tx) => {
-      // 1. Get old items to restore stock
-      const oldOrder = await tx.order.findUnique({
-        where: { id },
-        include: { order_items: true }
-      });
+    await prisma.order.update({
+      where: { id },
+      data: {
+        customer_name,
+        customer_phone,
+        customer_address,
+        total,
+        status,
+        source,
+        note,
+        payment_method_detail,
+        receipt_url,
+      }
+    });
 
-      if (oldOrder && (oldOrder.status !== 'cancelled')) {
-        for (const item of oldOrder.order_items) {
-          if (!item.product_id) continue;
-          const qty = Number(item.quantity) || 0;
-          
-          // Restore Color Inventory
-          await tx.productInventory.update({
-            where: { productId_colorKey: { productId: item.product_id, colorKey: item.color || null } },
-            data: { stock: { increment: qty } }
-          });
-          // Restore Global Stock
-          await tx.product.update({
-            where: { id: item.product_id },
-            data: { stock: { increment: qty } }
-          });
-          // Create Stock Movement (In)
-          await tx.stockMovement.create({
-            data: {
-              productId: item.product_id,
-              colorKey: item.color || null,
-              qty: qty,
-              type: 'in',
-              orderId: id,
-              orderNumber: oldOrder.order_number,
-              customerName: `Update Restore: ${oldOrder.customer_name}`
-            }
-          });
+    if (total != null && Number(total) < 0) {
+      return res.status(400).json({ message: 'Total amount cannot be negative' });
+    }
+
+    const itemsToProcess = order_items || [];
+    if (itemsToProcess.length > 0) {
+      for (const item of itemsToProcess) {
+        if (Number(item.quantity) <= 0) {
+          return res.status(400).json({ message: `Invalid quantity for product ${item.product_name}` });
+        }
+        if (Number(item.product_price || item.price) < 0) {
+          return res.status(400).json({ message: `Invalid price for product ${item.product_name}` });
         }
       }
 
-      // 2. Update order base info
-      await tx.order.update({
-        where: { id },
-        data: {
-          customer_name,
-          customer_phone,
-          customer_address,
-          total,
-          status,
-          source,
-          note,
-          payment_method_detail,
-          receipt_url,
-        }
-      });
-
-      // 3. Update items
-      const itemsToProcess = order_items || [];
-      if (itemsToProcess.length > 0) {
-        await tx.orderItem.deleteMany({ where: { order_id: id } });
-        const rows = [];
-        for (const item of itemsToProcess) {
-          const resolvedProductId = await resolveOrderItemProductId(item);
-          rows.push({
-            order_id: id,
-            product_id: resolvedProductId,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            product_price: item.product_price || item.price || 0,
-            image_url: item.image_url,
-            sku: item.sku,
-            size: item.size,
-            color: item.color,
-            local_note: item.local_note,
-            rope_weight_kg: item.rope_weight_kg
-          });
-
-          // Deduct New Stock (if not cancelled)
-          if (status !== 'cancelled' && resolvedProductId) {
-            const qty = Number(item.quantity) || 0;
-            // Update Color Inventory
-            await tx.productInventory.upsert({
-              where: { productId_colorKey: { productId: resolvedProductId, colorKey: item.color || null } },
-              update: { stock: { decrement: qty } },
-              create: { productId: resolvedProductId, colorKey: item.color || null, stock: -qty }
-            });
-            // Update Global Stock
-            await tx.product.update({
-              where: { id: resolvedProductId },
-              data: { stock: { decrement: qty } }
-            });
-            // Create Stock Movement (Out)
-            await tx.stockMovement.create({
-              data: {
-                productId: resolvedProductId,
-                colorKey: item.color || null,
-                qty: -qty,
-                type: 'out',
-                orderId: id,
-                orderNumber: oldOrder.order_number,
-                customerName: `Update Deduct: ${customer_name}`
-              }
-            });
-          }
-        }
-        await tx.orderItem.createMany({ data: rows });
+      await prisma.orderItem.deleteMany({ where: { order_id: id } });
+      const rows = [];
+      for (const item of itemsToProcess) {
+        const resolvedProductId = await resolveOrderItemProductId(item);
+        rows.push({
+          order_id: id,
+          product_id: resolvedProductId,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          product_price: item.product_price || item.price || 0,
+          image_url: item.image_url,
+          sku: item.sku,
+          size: item.size,
+          color: item.color,
+          local_note: item.local_note || item.line_note,
+          rope_weight_kg: item.rope_weight_kg
+        });
       }
+      await prisma.orderItem.createMany({ data: rows });
+    }
 
-      return tx.order.findUnique({
-        where: { id },
-        include: { order_items: true }
-      });
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id },
+      include: { order_items: true }
     });
 
     res.json(updatedOrder);
@@ -392,78 +280,14 @@ exports.updateOrderStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
-    const updatedOrder = await prisma.$transaction(async (tx) => {
-      const oldOrder = await tx.order.findUnique({
-        where: { id },
-        include: { order_items: true }
-      });
-
-      if (!oldOrder) throw new Error('Order not found');
-
-      // If moving TO cancelled from something NOT cancelled -> Restore stock
-      if (status === 'cancelled' && oldOrder.status !== 'cancelled') {
-        for (const item of oldOrder.order_items) {
-          if (!item.product_id) continue;
-          const qty = Number(item.quantity) || 0;
-          await tx.productInventory.update({
-            where: { productId_colorKey: { productId: item.product_id, colorKey: item.color || null } },
-            data: { stock: { increment: qty } }
-          });
-          await tx.product.update({
-            where: { id: item.product_id },
-            data: { stock: { increment: qty } }
-          });
-          await tx.stockMovement.create({
-            data: {
-              productId: item.product_id,
-              colorKey: item.color || null,
-              qty: qty,
-              type: 'in',
-              orderId: id,
-              orderNumber: oldOrder.order_number,
-              customerName: `Status Cancelled: ${oldOrder.customer_name}`
-            }
-          });
-        }
-      } 
-      // If moving FROM cancelled to something NOT cancelled -> Deduct stock
-      else if (status !== 'cancelled' && oldOrder.status === 'cancelled') {
-        for (const item of oldOrder.order_items) {
-          if (!item.product_id) continue;
-          const qty = Number(item.quantity) || 0;
-          await tx.productInventory.upsert({
-            where: { productId_colorKey: { productId: item.product_id, colorKey: item.color || null } },
-            update: { stock: { decrement: qty } },
-            create: { productId: item.product_id, colorKey: item.color || null, stock: -qty }
-          });
-          await tx.product.update({
-            where: { id: item.product_id },
-            data: { stock: { decrement: qty } }
-          });
-          await tx.stockMovement.create({
-            data: {
-              productId: item.product_id,
-              colorKey: item.color || null,
-              qty: -qty,
-              type: 'out',
-              orderId: id,
-              orderNumber: oldOrder.order_number,
-              customerName: `Status Restore: ${oldOrder.customer_name}`
-            }
-          });
-        }
-      }
-
-      return tx.order.update({
-        where: { id },
-        data: { status }
-      });
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: { status }
     });
-
     res.json(updatedOrder);
   } catch (error) {
     console.error('Error updating order status:', error);
-    res.status(500).json({ message: 'Server error updating order status', error: error.message });
+    res.status(500).json({ message: 'Server error updating order status' });
   }
 };
 

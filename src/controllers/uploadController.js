@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 
 function getSupabaseClient() {
-    const url = String(process.env.SUPABASE_URL || '').trim();
-    const key = String(process.env.SUPABASE_ANON_KEY || '').trim();
+    const url = String(process.env.NUUR_SOURCE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+    const key = String(process.env.NUUR_SOURCE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
     if (!url || !key) return null;
     return createClient(url, key);
 }

@@ -57,7 +57,8 @@ RETURNS TABLE (
     created_at TIMESTAMP WITH TIME ZONE,
     last_sign_in_at TIMESTAMP WITH TIME ZONE,
     total_orders BIGINT,
-    total_spend NUMERIC
+    total_spend NUMERIC,
+    last_order_date TIMESTAMP WITH TIME ZONE
 ) 
 SECURITY DEFINER
 SET search_path = public
@@ -79,7 +80,8 @@ BEGIN
         au.created_at,
         au.last_sign_in_at,
         COUNT(DISTINCT o.id) as total_orders,
-        COALESCE(SUM(o.total), 0) as total_spend
+        COALESCE(SUM(o.total), 0) as total_spend,
+        MAX(o.created_at) as last_order_date
     FROM auth.users au
     LEFT JOIN user_profiles up ON au.id = up.id
     LEFT JOIN orders o ON (
