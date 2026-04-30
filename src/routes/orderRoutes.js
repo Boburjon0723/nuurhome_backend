@@ -13,6 +13,7 @@ router.patch('/:id/status', orderController.updateOrderStatus);
 router.patch('/:id/restore', orderController.restoreOrder);
 router.delete('/:id', orderController.deleteOrder);
 router.delete('/:id/permanent', orderController.permanentDeleteOrder);
+router.get('/customer/:userId', orderController.getOrdersByUserId);
 router.post('/bulk-delete', orderController.deleteOrders);
 
 module.exports = router;

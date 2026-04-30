@@ -97,6 +97,7 @@ model Order {
   order_number          Int           @unique @default(autoincrement())
   customer_name         String?
   customer_phone        String?
+  customer_address      String?
   total                 Decimal       @default(0) @db.Decimal(15, 2)
   status                String        @default("new")
   source                String?       @default("dokon")

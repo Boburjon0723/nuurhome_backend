@@ -8,6 +8,7 @@ router.get('/:id', productController.getProductById);
 router.post('/', productController.createProduct);
 router.put('/:id', productController.updateProduct);
 router.post('/bulk-colors', productController.bulkUpdateCategoryColors);
+router.post('/bulk-content', productController.bulkUpdateCategoryContent);
 router.delete('/:id', productController.deleteProduct);
 
 module.exports = router;

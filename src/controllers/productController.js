@@ -158,3 +158,30 @@ exports.getProductsByIds = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.bulkUpdateCategoryContent = async (req, res) => {
+    const { categoryId, description_uz, description_ru, description_en, features } = req.body;
+    
+    if (!categoryId) {
+        return res.status(400).json({ message: 'CategoryId is required' });
+    }
+
+    try {
+        const updateData = {};
+        if (description_uz !== undefined) updateData.description_uz = description_uz;
+        if (description_ru !== undefined) updateData.description_ru = description_ru;
+        if (description_en !== undefined) updateData.description_en = description_en;
+        if (features !== undefined) updateData.features = features;
+
+        const result = await prisma.product.updateMany({
+            where: { categoryId: categoryId },
+            data: updateData
+        });
+
+        await redisClient.del(CACHE_KEY_PRODUCTS);
+        res.json({ message: `Successfully updated ${result.count} products` });
+    } catch (error) {
+        console.error('Bulk Update Content Error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
