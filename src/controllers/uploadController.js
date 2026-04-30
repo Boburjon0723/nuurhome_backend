@@ -21,9 +21,14 @@ exports.uploadMultiple = async (req, res) => {
 
         const urls = [];
         for (const file of req.files) {
-            const fileName = `${Date.now()}-${file.originalname}`;
+            // Fayl nomini tozalash: faqat harf, son, nuqta va chiziqlar qoladi
+            const cleanName = file.originalname
+                .replace(/[^a-zA-Z0-9.\-_]/g, "_")
+                .replace(/\s+/g, "_");
+            const fileName = `${Date.now()}-${cleanName}`;
+            
             const { data, error } = await supabase.storage
-                .from('products') // Make sure this bucket exists and is public
+                .from('products')
                 .upload(fileName, file.buffer, {
                     contentType: file.mimetype,
                     upsert: true
