@@ -25,4 +25,11 @@ const checkRole = (roles) => {
   };
 };
 
-module.exports = { authMiddleware, checkRole };
+const adminMiddleware = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Faqat adminlar uchun ruxsat berilgan' });
+  }
+  next();
+};
+
+module.exports = { authMiddleware, checkRole, adminMiddleware };

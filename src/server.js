@@ -20,6 +20,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const bannerRoutes = require('./routes/bannerRoutes');
 const benefitRoutes = require('./routes/benefitRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 const PORT = 5000;
@@ -49,6 +50,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/benefits', benefitRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'NuurHome API is running...' });

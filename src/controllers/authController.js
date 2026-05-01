@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 // REGISTRATSIYA
 const register = async (req, res) => {
-  const { email, password, fullname, phone, address } = req.body;
+  const { email, password, fullname, phone, address, role } = req.body;
 
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -22,7 +22,7 @@ const register = async (req, res) => {
         fullname,
         phone,
         address,
-        role: 'USER'
+        role: role || 'USER'
       }
     });
 

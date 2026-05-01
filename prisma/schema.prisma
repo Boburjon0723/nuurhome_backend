@@ -16,6 +16,8 @@ enum Role {
   ADMIN
   ERP
   SELLER
+  CRM
+  MOBILE_INTAKE
   USER
 }
 
