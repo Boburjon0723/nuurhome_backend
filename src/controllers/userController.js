@@ -31,7 +31,7 @@ const updateUserRole = async (req, res) => {
 
   try {
     const updatedUser = await prisma.user.update({
-      where: { id: parseInt(id) || id }, // Handle both int and string IDs if necessary
+      where: { id: id },
       data: { role },
       select: {
         id: true,
@@ -53,7 +53,7 @@ const deleteUser = async (req, res) => {
 
   try {
     await prisma.user.delete({
-      where: { id: parseInt(id) || id }
+      where: { id: id }
     });
     res.json({ message: 'Foydalanuvchi muvaffaqiyatli o\'chirildi' });
   } catch (error) {
