@@ -202,12 +202,21 @@ exports.getAnalytics = async (req, res) => {
 
     const productsCount = await prisma.product.count({ where: { isActive: true } });
     const employeesCount = await prisma.employee.count();
+    
+    // Calculate unique customers from all orders
+    const uniqueCustomers = new Set();
+    allOrders.forEach(o => {
+        if (o.customer_name) uniqueCustomers.add(o.customer_name + (o.customer_phone || ''));
+    });
+    const totalCustomers = uniqueCustomers.size;
 
     const resultData = {
       summary: {
         totalSales,
         totalExpense,
         totalIncome: totalSales,
+        totalOrders: allOrders.length,
+        totalCustomers: totalCustomers,
         ordersCount: completedOrders.length,
         productsCount,
         employeesCount,
