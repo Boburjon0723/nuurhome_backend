@@ -1,34 +1,29 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
-// Terminaldan emailni olish: node scripts/make_admin.js xodim@example.com
-const email = process.argv[2];
+async function main() {
+  const email = 'bs4731450@gmail.com';
+  const password = 'admin123';
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-async function makeAdmin() {
-  if (!email) {
-    console.log('Iltimos, emailni ko\'rsating: node scripts/make_admin.js email@example.com');
-    return;
-  }
-
-  try {
-    const user = await prisma.user.findUnique({ where: { email } });
-    
-    if (!user) {
-      console.log(`Foydalanuvchi topilmadi: ${email}`);
-      return;
+  const user = await prisma.user.upsert({
+    where: { email: email },
+    update: {
+      role: 'ADMIN'
+    },
+    create: {
+      email: email,
+      password: hashedPassword,
+      fullname: 'Admin User',
+      role: 'ADMIN'
     }
+  });
 
-    const updatedUser = await prisma.user.update({
-      where: { email },
-      data: { role: 'ADMIN' }
-    });
-
-    console.log(`Muvaffaqiyatli! ${updatedUser.email} endi ADMIN.`);
-  } catch (error) {
-    console.error('Xatolik:', error);
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log(`Muvaffaqiyatli: ${email} foydalanuvchisi ADMIN qilindi.`);
+  console.log(`Agar yangi yaratilgan bo'lsa, paroli: ${password}`);
 }
 
-makeAdmin();
+main()
+  .catch(e => console.error(e))
+  .finally(async () => await prisma.$disconnect());
